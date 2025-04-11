@@ -1,24 +1,31 @@
 from fastapi import FastAPI
 from kafka import KafkaProducer
+from kafka.errors import NoBrokersAvailable
 import time
 import random
 import json
-from kafka.errors import NoBrokersAvailable
+import logging
 
 app = FastAPI()
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 def init_producer():
-    retries = 5
-    for i in range(retries):
+    attempt = 1
+    while True:
         try:
-            producer = KafkaProducer(bootstrap_servers="kafka:9092",
-                                     value_serializer=lambda v: json.dumps(v).encode("utf-8"))
-            print("Kafka producer initialized successfully")
+            producer = KafkaProducer(
+                bootstrap_servers="kafka:9092",
+                value_serializer=lambda v: json.dumps(v).encode("utf-8")
+            )
+            logger.info("Kafka producer initialized successfully")
             return producer
         except NoBrokersAvailable:
-            print(f"Attempt {i+1}/{retries}: Kafka not available, retrying in 5 seconds...")
-            time.sleep(5)
-    raise Exception("Failed to connect to Kafka after multiple retries")
+            logger.warning(f"Attempt {attempt}: Kafka not available, retrying in 10 seconds...")
+            time.sleep(10)
+            attempt += 1
 
 producer = init_producer()
 
@@ -29,7 +36,11 @@ def send_log(endpoint, status, response_time):
         "response_time": response_time,
         "status": status
     }
-    producer.send("request_logs", log)
+    try:
+        producer.send("request_logs", log)
+        logger.info(f"Sent log to Kafka: {endpoint}")
+    except Exception as e:
+        logger.error(f"Error sending log to Kafka: {e}")
 
 @app.get("/users")
 def get_users():

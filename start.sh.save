@@ -1,0 +1,8 @@
+#!/bin/bash
+sleep 10
+echo "Running db_init.py"
+python db_init.py || echo "db_init.py failedecho "Starting log_consumer.py in background"
+python log_consumer.py & pid1=$!
+echo "Starting metrics_generator.py in foreground"
+python metrics_generator.py || echo "metrics_generator.py failed with exit code $?"
+wait $pid1

@@ -1,15 +1,22 @@
 import requests
-import random
 import time
+import logging
 
-endpoints = ["users", "products", "orders", "login", "health"]
-base_url = "http://localhost:8000"
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-while True:
-    endpoint = random.choice(endpoints)
+API_URL = "http://localhost:8000"
+
+def hit_endpoint(endpoint):
     try:
-        response = requests.get(f"{base_url}/{endpoint}")
-        print(f"Hit /{endpoint} - Status: {response.status_code}")
+        response = requests.get(f"{API_URL}{endpoint}")
+        logger.info(f"Hit {endpoint} - Status: {response.status_code}")
     except Exception as e:
-        print(f"Error hitting /{endpoint}: {e}")
-    time.sleep(random.uniform(0.1, 1))  # Random delay
+        logger.error(f"Failed to hit {endpoint}: {e}")
+
+if __name__ == "__main__":
+    endpoints = ["/health", "/products", "/users", "/orders", "/login"]
+    while True:
+        for endpoint in endpoints:
+            hit_endpoint(endpoint)
+        time.sleep(1)
